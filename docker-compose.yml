@@ -2,6 +2,12 @@ services:
   ml-mock-service:
     build:
       context: ./ml
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_API_URL: ${LLM_API_URL:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      OLLAMA_URL: ${OLLAMA_URL:-}
     expose:
       - "8081"
     healthcheck:

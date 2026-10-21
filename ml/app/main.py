@@ -7,6 +7,10 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 
+from app.llm import ExplainRequest, ExplainResponse, RecommendRequest, RecommendResponse
+from app.llm import explain as explain_decision
+from app.llm import recommend as recommend_product
+
 
 app = FastAPI(title="ML Mock Service", version="1.0.0")
 COMPANIES = json.loads(Path(__file__).with_name("companies.json").read_text(encoding="utf-8"))
@@ -119,4 +123,14 @@ def accounts(inn: str) -> dict:
         **company["abs"],
         "monthlyRevenue": _monthly_revenue(inn, company["fns"]["annualRevenue"]),
     }
+
+
+@app.post("/llm/recommend", response_model=RecommendResponse)
+async def llm_recommend(request: RecommendRequest) -> RecommendResponse:
+    return await recommend_product(request)
+
+
+@app.post("/llm/explain", response_model=ExplainResponse)
+async def llm_explain(request: ExplainRequest) -> ExplainResponse:
+    return await explain_decision(request)
 

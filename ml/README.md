@@ -11,6 +11,17 @@ docker compose up --build ml-mock-service
 В Docker-сети сервис доступен по адресу `http://ml-mock-service:8081`. Порт не
 публикуется на хост. OpenAPI находится на `/docs`, healthcheck — на `/health`.
 
+LLM-ручки:
+
+- `POST /llm/recommend` — рекомендация продукта;
+- `POST /llm/explain` — объяснение решения скоринга.
+
+Без настройки модели обе ручки сразу отвечают локальными правилами с
+`source: "RULES"`. Для Ollama скопируйте `.env.example` в `.env` и задайте
+`OLLAMA_URL`/`OLLAMA_MODEL`. Для OpenAI-compatible API задайте `LLM_API_URL`
+(полный URL `/chat/completions`), `LLM_API_KEY` и `LLM_MODEL`. Любая ошибка,
+невалидный ответ или превышение 2,5 секунды автоматически включает правила.
+
 Демо-сценарии:
 
 - `7701234560` — ООО «Колос и Ко»;
