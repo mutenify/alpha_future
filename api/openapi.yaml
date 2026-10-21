@@ -1,0 +1,1023 @@
+openapi: 3.0.3
+info:
+  title: Умный кредитный кабинет — Core API
+  version: 0.1.0
+  license:
+    name: MIT
+  description: |
+    API кабинета клиента и кабинета кредитного инспектора.
+    Статусы заявки и переходы описаны в docs/state_diagram и в README.
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Локальный запуск через docker compose
+security:
+  - bearerAuth: []
+tags:
+  - name: system
+    description: Проверки живости и готовности
+  - name: auth
+    description: Вход и роли
+  - name: products
+    description: Кредитные продукты и подбор
+  - name: companies
+    description: Данные компании по ИНН
+  - name: applications
+    description: Заявка клиента
+  - name: client
+    description: Кабинет клиента
+  - name: inspector
+    description: Кабинет кредитного инспектора
+paths:
+  /health:
+    get:
+      tags: [system]
+      summary: Процесс жив (liveness)
+      operationId: health
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+  /ready:
+    get:
+      tags: [system]
+      summary: Готов принимать трафик (readiness), проверяет БД и миграции
+      operationId: ready
+      security: []
+      responses:
+        '200':
+          description: Готов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+        '503':
+          description: Не готов, в checks указано, какая зависимость недоступна
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Вход по логину (и паролю вне демо-режима)
+      description: |
+        При DEMO_AUTH=true пароль не проверяется для логинов из /auth/demo-users:
+        кнопки «Я предприниматель» / «Я сотрудник банка» шлют только login.
+        Без DEMO_AUTH пароль обязателен (у демо-учёток он demo, миграция 000005).
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login]
+              properties:
+                login: { type: string, example: client1 }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: Токен доступа
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, role, user]
+                properties:
+                  accessToken: { type: string, description: 'JWT, claims: sub = users.id, role, exp' }
+                  role: { $ref: '#/components/schemas/Role' }
+                  user: { $ref: '#/components/schemas/UserProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /auth/demo-users:
+    get:
+      tags: [auth]
+      summary: Демо-учётки для кнопок на экране входа
+      description: Читает users с заполненным scenario_hint (миграция 000005). Отдаётся только при DEMO_AUTH=true, иначе 404.
+      operationId: listDemoUsers
+      security: []
+      responses:
+        '200':
+          description: Учётки
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/UserProfile' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Текущий пользователь по токену (шапка кабинета, восстановление сессии после F5)
+      operationId: getMe
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserProfile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /client/dashboard:
+    get:
+      tags: [client]
+      summary: Вкладка «Главная» клиента
+      description: |
+        Счёт и остаток — из мока АБС (/abs/{inn}/accounts) по companies.settlement_account,
+        активные кредиты — contracts с disbursed_at, уведомления собираются из открытых
+        info_requests, предложений в статусе PROPOSED и последних записей application_status_history.
+        Только роль CLIENT.
+      operationId: getClientDashboard
+      responses:
+        '200':
+          description: Данные главной
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClientDashboard' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /products:
+    get:
+      tags: [products]
+      summary: Список активных кредитных продуктов
+      operationId: listProducts
+      responses:
+        '200':
+          description: Продукты
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Product' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /products/recommend:
+    post:
+      tags: [products]
+      summary: Подбор продукта по цели, сумме и сроку
+      description: Если LLM недоступна, рекомендация строится по правилам, ответ имеет source = RULES.
+      operationId: recommendProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, termMonths]
+              properties:
+                purpose: { type: string, example: Закупка товара к сезону }
+                amount: { type: number, example: 2000000 }
+                termMonths: { type: integer, example: 12 }
+      responses:
+        '200':
+          description: Рекомендация
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [productCode, monthlyPayment, explanation, source]
+                properties:
+                  productCode: { type: string, example: WORKING_CAPITAL }
+                  monthlyPayment: { type: number, example: 185300.5 }
+                  explanation: { type: string }
+                  source: { type: string, enum: [LLM, RULES] }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /products/calculate:
+    post:
+      tags: [products]
+      summary: Калькулятор на вкладке «Подобрать кредит»
+      description: |
+        Аннуитетный платёж A(S, T, r) = S · (r/12) / (1 − (1 + r/12)^(−T)) по base_rate продукта.
+        Без скоринга, поэтому ставка ориентировочная. Сумма и срок проверяются по границам продукта.
+      operationId: calculateLoan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productCode, amount, termMonths]
+              properties:
+                productCode: { type: string, example: WORKING_CAPITAL }
+                amount: { type: number, example: 2000000 }
+                termMonths: { type: integer, example: 12 }
+      responses:
+        '200':
+          description: Расчёт
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rate, monthlyPayment, totalPayment, overpayment]
+                properties:
+                  rate: { type: number, example: 19.5 }
+                  monthlyPayment: { type: number }
+                  totalPayment: { type: number }
+                  overpayment: { type: number }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /companies/lookup:
+    get:
+      tags: [companies]
+      summary: Автозаполнение данных компании по ИНН (мок ЕГРЮЛ/ЕГРИП)
+      operationId: lookupCompany
+      parameters:
+        - name: inn
+          in: query
+          required: true
+          schema: { type: string, pattern: '^[0-9]{10}([0-9]{2})?$' }
+      responses:
+        '200':
+          description: Данные компании
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /applications:
+    get:
+      tags: [applications]
+      summary: Заявки текущего пользователя (для инспектора — очередь)
+      operationId: listApplications
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ApplicationStatus' }
+      responses:
+        '200':
+          description: Список заявок
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [applications]
+      summary: Создать черновик заявки (status = DRAFT)
+      operationId: createApplication
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplicationInput' }
+      responses:
+        '201':
+          description: Черновик создан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/IdempotencyMismatch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /applications/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [applications]
+      summary: Заявка с текущим статусом и следующим шагом
+      operationId: getApplication
+      responses:
+        '200':
+          description: Заявка
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [applications]
+      summary: Изменить черновик (только в статусе DRAFT)
+      operationId: updateDraft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ApplicationInput' }
+      responses:
+        '200':
+          description: Черновик обновлён
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{id}/submit:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags: [applications]
+      summary: Подать заявку (DRAFT → SUBMITTED), дальше конвейер идёт асинхронно
+      operationId: submitApplication
+      description: |
+        Идемпотентно: повтор с тем же Idempotency-Key возвращает тот же ответ.
+        Подача ставит задачу конвейера в очередь в Postgres, поэтому заявка не теряется при рестарте.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Заявка принята в обработку
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '422': { $ref: '#/components/responses/IdempotencyMismatch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{id}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags: [applications]
+      summary: Отозвать заявку клиентом (→ CANCELLED)
+      operationId: cancelApplication
+      responses:
+        '200':
+          description: Заявка отозвана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{id}/events:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [applications]
+      summary: Поток смены статусов (Server-Sent Events)
+      description: Каждое событие содержит JSON StatusChange. Альтернатива для клиента без SSE — опрос GET /applications/{id}.
+      operationId: streamApplicationEvents
+      responses:
+        '200':
+          description: Поток событий
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /applications/{id}/history:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [applications]
+      summary: История статусов для таймлайна
+      operationId: getApplicationHistory
+      responses:
+        '200':
+          description: История
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/StatusChange' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /applications/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [applications]
+      summary: Документы заявки (анкета клиента и карточка инспектора)
+      operationId: listDocuments
+      responses:
+        '200':
+          description: Документы
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Document' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [applications]
+      summary: Загрузить документ
+      description: |
+        Если заявка в INFO_REQUESTED, загрузка закрывает запрос. Заявка возвращается
+        в SUBMITTED (запрос автопроверки) или в MANUAL_REVIEW (запрос инспектора).
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, docType]
+              properties:
+                file: { type: string, format: binary }
+                docType: { type: string, example: LEASE_AGREEMENT }
+                infoRequestId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Документ загружен
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Document' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{id}/offer/accept:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags: [applications]
+      summary: Принять контрпредложение (COUNTER_OFFER → APPROVED)
+      operationId: acceptOffer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [offerId]
+              properties:
+                offerId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Предложение принято
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{id}/offer/decline:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags: [applications]
+      summary: Отказаться от контрпредложения (COUNTER_OFFER → CANCELLED)
+      operationId: declineOffer
+      responses:
+        '200':
+          description: Предложение отклонено
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{id}/sign:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags: [applications]
+      summary: Подписать договор ПЭП (APPROVED → SIGNED, затем выдача-мок → DISBURSED)
+      operationId: signContract
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmationCode]
+              properties:
+                confirmationCode: { type: string, example: '0000', description: Код подтверждения в интерфейсе (симуляция) }
+      responses:
+        '200':
+          description: Договор подписан
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Contract' }
+        '422': { $ref: '#/components/responses/IdempotencyMismatch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /applications/{id}/scoring:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    get:
+      tags: [inspector]
+      summary: Данные обогащения и оценка риска для карточки инспектора
+      operationId: getScoring
+      responses:
+        '200':
+          description: Скоринг и результаты обогащения
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ScoringDetails' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /applications/{id}/decision:
+    parameters:
+      - $ref: '#/components/parameters/ApplicationId'
+    post:
+      tags: [inspector]
+      summary: Решение инспектора по заявке в MANUAL_REVIEW
+      operationId: makeDecision
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DecisionInput' }
+      responses:
+        '200':
+          description: Решение принято
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Application' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '422': { $ref: '#/components/responses/IdempotencyMismatch' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /inspector/queue:
+    get:
+      tags: [inspector]
+      summary: Вкладка «Очередь заявок» — 4 счётчика и таблица
+      description: |
+        Читает представление v_inspector_queue (миграция 000004), DRAFT туда не попадает.
+        Счётчики считаются по тому же представлению без учёта фильтра status. Только INSPECTOR.
+      operationId: getInspectorQueue
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { $ref: '#/components/schemas/ApplicationStatus' }
+        - name: q
+          in: query
+          required: false
+          description: Поиск по названию компании, ИНН или номеру Z-…
+          schema: { type: string }
+      responses:
+        '200':
+          description: Очередь
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [counters, items]
+                properties:
+                  counters:
+                    type: object
+                    required: [manualReview, infoRequested, autoDecidedToday, total]
+                    properties:
+                      manualReview: { type: integer, description: Ждут решения инспектора }
+                      infoRequested: { type: integer, description: Ждут документов от клиента }
+                      autoDecidedToday: { type: integer, description: Решены автоматически за сегодня }
+                      total: { type: integer }
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/QueueItem' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /rules:
+    get:
+      tags: [inspector]
+      summary: Вкладка «Продукты и правила» (только чтение)
+      description: credit_products с порогами политики, активная версия scorecard_models с её scorecard_bins и справочник industries. Только INSPECTOR.
+      operationId: getRules
+      responses:
+        '200':
+          description: Правила
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Rules' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /audit-log:
+    get:
+      tags: [inspector]
+      summary: Вкладка «Журнал действий»
+      description: |
+        Лента из audit_log (actor_type и message добавлены в 000004), новые сверху.
+        Таймлайн одной заявки — это /applications/{id}/history (application_status_history). Только INSPECTOR.
+      operationId: listAuditLog
+      parameters:
+        - name: applicationId
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+        - name: actorType
+          in: query
+          required: false
+          schema: { type: string, enum: [SYSTEM, CLIENT, INSPECTOR] }
+        - name: limit
+          in: query
+          required: false
+          schema: { type: integer, default: 50, maximum: 200 }
+        - name: before
+          in: query
+          required: false
+          description: Курсор, id последней полученной записи
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Записи журнала
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Токен из /auth/login; роль (CLIENT, INSPECTOR) в claim role. Клиент видит только свои заявки, решения принимает только INSPECTOR.
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: UUID, который клиент генерирует на одно действие пользователя. Повтор с тем же ключом не создаёт дубль; тот же ключ с другим телом даёт 422.
+      schema: { type: string, format: uuid }
+    ApplicationId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    BadRequest:
+      description: Ошибка валидации
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Не авторизован
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: Нет прав для роли
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    IdempotencyMismatch:
+      description: Idempotency-Key уже использован с другим телом запроса
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: Переход недопустим из текущего статуса или заявку уже изменили
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ok, degraded, down] }
+        checks:
+          type: object
+          additionalProperties: { type: string, enum: [ok, down] }
+          example: { db: ok, mocks: ok, llm: down }
+    Role:
+      type: string
+      enum: [CLIENT, INSPECTOR, ADMIN]
+    ApplicationStatus:
+      type: string
+      enum: [DRAFT, SUBMITTED, INFO_REQUESTED, ENRICHING, SCORING, MANUAL_REVIEW,
+             COUNTER_OFFER, APPROVED, SIGNED, DISBURSED, REJECTED, CANCELLED]
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: INVALID_TRANSITION }
+        message: { type: string }
+    Product:
+      type: object
+      required: [code, name, minAmount, maxAmount, minTermMonths, maxTermMonths, baseRate]
+      properties:
+        code: { type: string, example: WORKING_CAPITAL }
+        name: { type: string, example: Оборотный кредит }
+        description: { type: string }
+        minAmount: { type: number }
+        maxAmount: { type: number }
+        minTermMonths: { type: integer }
+        maxTermMonths: { type: integer }
+        baseRate: { type: number, example: 19.5 }
+    Company:
+      type: object
+      required: [inn, name, legalForm]
+      properties:
+        inn: { type: string, example: '7701234567' }
+        ogrn: { type: string }
+        name: { type: string, example: ООО «Ромашка» }
+        legalForm: { type: string, enum: [LLC, IE] }
+        okved: { type: string, example: '47.11' }
+        registeredAt: { type: string, format: date }
+    ApplicationInput:
+      type: object
+      required: [companyInn, productCode, amount, termMonths]
+      properties:
+        companyInn: { type: string, pattern: '^[0-9]{10}([0-9]{2})?$' }
+        productCode: { type: string }
+        amount: { type: number, minimum: 1 }
+        termMonths: { type: integer, minimum: 1 }
+        purpose: { type: string }
+    Application:
+      type: object
+      required: [id, number, status, amount, termMonths, productCode, company, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        number: { type: integer, example: 1024 }
+        status: { $ref: '#/components/schemas/ApplicationStatus' }
+        productCode: { type: string }
+        amount: { type: number }
+        termMonths: { type: integer }
+        purpose: { type: string }
+        company: { $ref: '#/components/schemas/Company' }
+        nextStep:
+          type: string
+          description: Что клиенту делать дальше, простым языком
+          example: Загрузите договор аренды помещения
+        decisionReason: { type: string, description: Объяснение решения для клиента }
+        offers:
+          type: array
+          items: { $ref: '#/components/schemas/Offer' }
+        openInfoRequest: { $ref: '#/components/schemas/InfoRequest' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Offer:
+      type: object
+      required: [id, kind, productCode, amount, termMonths, rate, monthlyPayment, status]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [ORIGINAL, COUNTER] }
+        variant:
+          type: string
+          enum: [REQUESTED, POINT_A, POINT_B, INSPECTOR]
+          description: POINT_A — меньше сумма при том же сроке, POINT_B — та же сумма на больший срок
+        productCode: { type: string }
+        amount: { type: number }
+        termMonths: { type: integer }
+        rate: { type: number }
+        monthlyPayment: { type: number }
+        pGap: { type: number, description: Вероятность кассового разрыва при этих условиях, example: 0.031 }
+        status: { type: string, enum: [PROPOSED, ACCEPTED, DECLINED, EXPIRED] }
+        expiresAt: { type: string, format: date-time }
+    InfoRequest:
+      type: object
+      required: [id, origin, description, status]
+      properties:
+        id: { type: string, format: uuid }
+        origin: { type: string, enum: [AUTO_CHECK, INSPECTOR] }
+        description: { type: string }
+        status: { type: string, enum: [OPEN, FULFILLED, EXPIRED, CANCELLED] }
+    Document:
+      type: object
+      required: [id, docType, fileName, uploadedAt]
+      properties:
+        id: { type: string, format: uuid }
+        docType: { type: string }
+        fileName: { type: string }
+        uploadedAt: { type: string, format: date-time }
+    StatusChange:
+      type: object
+      required: [toStatus, actorType, createdAt]
+      properties:
+        fromStatus: { $ref: '#/components/schemas/ApplicationStatus' }
+        toStatus: { $ref: '#/components/schemas/ApplicationStatus' }
+        actorType: { type: string, enum: [SYSTEM, CLIENT, INSPECTOR] }
+        reason: { type: string }
+        createdAt: { type: string, format: date-time }
+    ScoringDetails:
+      type: object
+      required: [pd, score, modelVersion, factors, financialProfile, enrichment]
+      properties:
+        pd: { type: number, description: PD клиента по балльной карте (слой 1), example: 0.14 }
+        score: { type: integer, example: 612 }
+        modelVersion: { type: string, example: points-v1 }
+        factors:
+          type: array
+          items:
+            type: object
+            required: [code, contribution]
+            properties:
+              code: { type: string, example: BUSINESS_AGE }
+              value: { type: string, example: 1 год 3 мес. }
+              contribution: { type: number, example: 0.04 }
+              explanation: { type: string }
+        financialProfile: { $ref: '#/components/schemas/FinancialProfile' }
+        cashGap:
+          type: object
+          description: Слой 2 для запрошенных суммы и срока
+          properties:
+            requestedPayment: { type: number, description: 'A(S, T, r)' }
+            pGap: { type: number, example: 0.072 }
+            gapThresholdQ: { type: number, example: 0.05 }
+            debtCoverage: { type: number, description: 'μ / (D_old + A)' }
+            safetyMonths: { type: number, description: 'C₀ / (D_old + A)' }
+            volatility: { type: number, description: 'σ / μ' }
+        enrichment:
+          type: array
+          items:
+            type: object
+            required: [source, status]
+            properties:
+              source: { type: string, enum: [EGRUL, FNS, BKI] }
+              status: { type: string, enum: [OK, ERROR, TIMEOUT] }
+              payload: { type: object, additionalProperties: true }
+    FinancialProfile:
+      type: object
+      required: [monthlyRevenue, cashBalance, currentDebtPayments, cashFlowMu, cashFlowSigma]
+      properties:
+        monthlyRevenue:
+          type: array
+          items:
+            type: object
+            required: [month, amount]
+            properties:
+              month: { type: string, example: 2026-09 }
+              amount: { type: number }
+        revenueCv: { type: number }
+        cashBalance: { type: number, description: C₀ — остаток на счетах }
+        currentDebtPayments: { type: number, description: D_old — платежи по действующим кредитам в месяц }
+        taxDebt: { type: number }
+        bkiOverdues12m: { type: integer }
+        bkiInquiries3m: { type: integer }
+        businessAgeMonths: { type: integer }
+        okved: { type: string }
+        cashFlowMu: { type: number, description: μ — средний свободный поток в месяц }
+        cashFlowSigma: { type: number, description: σ — стандартное отклонение потока }
+    DecisionInput:
+      type: object
+      required: [outcome, reasonText]
+      properties:
+        outcome: { type: string, enum: [APPROVED, COUNTER_OFFER, INFO_REQUESTED, REJECTED] }
+        reasonText: { type: string, description: 'Обязательная причина, попадает в аудит' }
+        counterOffer:
+          type: object
+          description: Обязательно при outcome = COUNTER_OFFER
+          properties:
+            productCode: { type: string }
+            amount: { type: number }
+            termMonths: { type: integer }
+        infoRequestDescription:
+          type: string
+          description: Обязательно при outcome = INFO_REQUESTED
+    Contract:
+      type: object
+      required: [contractNumber, signedAt, applicationStatus]
+      properties:
+        contractNumber: { type: string }
+        signedAt: { type: string, format: date-time }
+        disbursedAt: { type: string, format: date-time }
+        applicationStatus: { $ref: '#/components/schemas/ApplicationStatus' }
+    UserProfile:
+      type: object
+      required: [id, login, role, fullName]
+      properties:
+        id: { type: string, format: uuid }
+        login: { type: string, example: client1 }
+        role: { $ref: '#/components/schemas/Role' }
+        fullName: { type: string, example: Ирина Иванова }
+        position: { type: string, example: Генеральный директор }
+        scenarioHint: { type: string, example: 'Сценарий: контрпредложение' }
+        company: { $ref: '#/components/schemas/Company' }
+    ClientDashboard:
+      type: object
+      required: [company, activeLoans, applications, notifications]
+      properties:
+        company: { $ref: '#/components/schemas/Company' }
+        account:
+          type: object
+          description: Нет, если мок АБС недоступен; фронт показывает заглушку
+          properties:
+            number: { type: string, example: '40702810000000000001' }
+            balance: { type: number }
+        activeLoans:
+          type: array
+          items:
+            type: object
+            required: [contractNumber, productCode, amount, termMonths, rate, monthlyPayment]
+            properties:
+              contractNumber: { type: string }
+              productCode: { type: string }
+              amount: { type: number }
+              termMonths: { type: integer }
+              rate: { type: number }
+              monthlyPayment: { type: number }
+              disbursedAt: { type: string, format: date-time }
+        applications:
+          type: array
+          description: Незавершённые заявки клиента для карточки «Моя заявка»
+          items: { $ref: '#/components/schemas/Application' }
+        notifications:
+          type: array
+          items:
+            type: object
+            required: [kind, text, createdAt]
+            properties:
+              kind: { type: string, enum: [INFO_REQUESTED, OFFER, STATUS] }
+              text: { type: string, example: Банк запросил договор аренды помещения }
+              applicationId: { type: string, format: uuid }
+              createdAt: { type: string, format: date-time }
+    QueueItem:
+      type: object
+      required: [id, displayNumber, status, companyName, inn, productCode, amount, termMonths, createdAt]
+      description: Строка v_inspector_queue
+      properties:
+        id: { type: string, format: uuid }
+        displayNumber: { type: string, example: Z-1024 }
+        status: { $ref: '#/components/schemas/ApplicationStatus' }
+        companyName: { type: string }
+        inn: { type: string }
+        productCode: { type: string }
+        productName: { type: string }
+        amount: { type: number }
+        termMonths: { type: integer }
+        score: { type: integer, description: Сырой балл карты }
+        scoreDisplay: { type: integer, description: Балл в шкале 0–100 для колонки «БАЛЛ» }
+        pd: { type: number }
+        lastDecidedBy: { type: string, enum: [SYSTEM, INSPECTOR] }
+        lastOutcome: { type: string }
+        createdAt: { type: string, format: date-time }
+    Rules:
+      type: object
+      required: [products, scorecard, industries]
+      properties:
+        products:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Product'
+              - type: object
+                properties:
+                  lgd: { type: number }
+                  pdAutoApproveMax: { type: number, example: 0.10 }
+                  pdRejectMin: { type: number, example: 0.25 }
+                  gapThresholdQ: { type: number }
+                  paymentShareK: { type: number }
+        scorecard:
+          type: object
+          required: [version, baseScore, baseOdds, pdo, bins]
+          properties:
+            version: { type: string, example: v1 }
+            baseScore: { type: integer }
+            baseOdds: { type: number }
+            pdo: { type: integer }
+            scoreMin: { type: integer }
+            scoreMax: { type: integer }
+            bins:
+              type: array
+              items:
+                type: object
+                required: [factor, points]
+                properties:
+                  factor: { type: string, example: age_months }
+                  lowerBound: { type: number, nullable: true }
+                  upperBound: { type: number, nullable: true }
+                  category: { type: string, nullable: true }
+                  points: { type: integer }
+                  explanation: { type: string }
+        industries:
+          type: array
+          items:
+            type: object
+            required: [code, name, margin, revenueCv]
+            properties:
+              code: { type: string, example: '47' }
+              name: { type: string }
+              margin: { type: number }
+              revenueCv: { type: number }
+    AuditEntry:
+      type: object
+      required: [id, actorType, action, entityType, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        actorType: { type: string, enum: [SYSTEM, CLIENT, INSPECTOR] }
+        actorName: { type: string, description: 'users.full_name, если действовал человек' }
+        action: { type: string, example: DECISION_MADE }
+        entityType: { type: string, example: application }
+        entityId: { type: string, format: uuid }
+        message: { type: string, example: 'Инспектор Елена Волкова одобрила заявку Z-2022' }
+        createdAt: { type: string, format: date-time }
