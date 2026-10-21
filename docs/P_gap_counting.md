@@ -65,13 +65,13 @@
 **4. Вероятность кассового разрыва (`P_gap`) через функцию ошибок Гаусса:**
 > **P_gap = Φ(Z) = 0.5 × [ 1 + erf( Z / √2 ) ]**
 
-**Определение функции ошибок Гаусса `erf(x)` через интеграл:**
+**Определение функции ошибок Гаусса $\text{erf}(x)$ через интеграл:**
 
-$$\operatorname{erf}(x) = \frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^2} \, dt$$
+$$\text{erf}(x) = \frac{2}{\sqrt{\pi}} \int_{0}^{x} e^{-t^2} \, dt$$
 
-**Численное вычисление `erf(x)` через разложение в ряд Тейлора:**
+**Численное вычисление $\text{erf}(x)$ через разложение в ряд Тейлора:**
 
-$$\operatorname{erf}(x) = \frac{2}{\sqrt{\pi}} \sum_{n=0}^{\infty} \frac{(-1)^n x^{2n+1}}{n! (2n+1)} \approx \frac{2}{\sqrt{\pi}} \left( x - \frac{x^3}{3} + \frac{x^5}{10} - \frac{x^7}{42} + \frac{x^9}{216} - \dots \right)$$
+$$\text{erf}(x) = \frac{2}{\sqrt{\pi}} \sum_{n=0}^{\infty} \frac{(-1)^n x^{2n+1}}{n! (2n+1)} \approx \frac{2}{\sqrt{\pi}} \left( x - \frac{x^3}{3} + \frac{x^5}{10} - \frac{x^7}{42} + \frac{x^9}{216} - \dots \right)$$
 
 ---
 
