@@ -1,0 +1,51 @@
+{
+  "7701234560": {
+    "egrul": {"ogrn": "1027700132195", "name": "ООО «Колос и Ко»", "legalForm": "LLC", "okved": "10.71", "registeredAt": "2022-03-14", "status": "ACTIVE", "director": "Иванова Ирина Сергеевна", "stopFactor": null},
+    "fns": {"annualRevenue": 38000000, "employees": 23, "taxDebt": 86400, "revenueTrend": 0.12},
+    "bki": {"activeLoansCount": 2, "totalDebtBalance": 4100000, "overdues12m": 1, "maxOverdueDays": 18, "inquiries3m": 2},
+    "abs": {"settlementAccount": "40702810400000012345", "cashBalance": 1284300, "currentDebtPayments": 110000}
+  },
+  "7812345675": {
+    "egrul": {"ogrn": "1037828001234", "name": "ООО «Северная Линия»", "legalForm": "LLC", "okved": "49.41", "registeredAt": "2018-07-02", "status": "ACTIVE", "director": "Смирнов Павел Андреевич", "stopFactor": null},
+    "fns": {"annualRevenue": 124000000, "employees": 61, "taxDebt": 0, "revenueTrend": 0.19},
+    "bki": {"activeLoansCount": 3, "totalDebtBalance": 12600000, "overdues12m": 0, "maxOverdueDays": 0, "inquiries3m": 1},
+    "abs": {"settlementAccount": "40702810500000022346", "cashBalance": 6920000, "currentDebtPayments": 420000}
+  },
+  "5401234566": {
+    "egrul": {"ogrn": "1165476123456", "name": "ООО «Сибирский Фермер»", "legalForm": "LLC", "okved": "01.11", "registeredAt": "2016-05-19", "status": "ACTIVE", "director": "Кузнецова Мария Олеговна", "stopFactor": null},
+    "fns": {"annualRevenue": 67200000, "employees": 34, "taxDebt": 21500, "revenueTrend": 0.08},
+    "bki": {"activeLoansCount": 1, "totalDebtBalance": 2800000, "overdues12m": 0, "maxOverdueDays": 0, "inquiries3m": 1},
+    "abs": {"settlementAccount": "40702810600000032347", "cashBalance": 2410000, "currentDebtPayments": 175000}
+  },
+  "6671234569": {
+    "egrul": {"ogrn": "1086671012345", "name": "ООО «Урал Деталь»", "legalForm": "LLC", "okved": "25.62", "registeredAt": "2008-11-06", "status": "ACTIVE", "director": "Попов Алексей Викторович", "stopFactor": null},
+    "fns": {"annualRevenue": 91000000, "employees": 48, "taxDebt": 143000, "revenueTrend": -0.04},
+    "bki": {"activeLoansCount": 4, "totalDebtBalance": 17800000, "overdues12m": 2, "maxOverdueDays": 27, "inquiries3m": 3},
+    "abs": {"settlementAccount": "40702810700000042348", "cashBalance": 870000, "currentDebtPayments": 590000}
+  },
+  "1651234561": {
+    "egrul": {"ogrn": "1141690067890", "name": "ООО «Волга Текстиль»", "legalForm": "LLC", "okved": "13.92", "registeredAt": "2014-09-23", "status": "ACTIVE", "director": "Хабибуллин Ринат Маратович", "stopFactor": null},
+    "fns": {"annualRevenue": 45500000, "employees": 29, "taxDebt": 0, "revenueTrend": 0.06},
+    "bki": {"activeLoansCount": 1, "totalDebtBalance": 1900000, "overdues12m": 0, "maxOverdueDays": 0, "inquiries3m": 0},
+    "abs": {"settlementAccount": "40702810800000052349", "cashBalance": 1960000, "currentDebtPayments": 95000}
+  },
+  "2311234566": {
+    "egrul": {"ogrn": "1052305701234", "name": "ООО «Южный Сад»", "legalForm": "LLC", "okved": "46.31", "registeredAt": "2005-04-12", "status": "ACTIVE", "director": "Мельникова Елена Игоревна", "stopFactor": null},
+    "fns": {"annualRevenue": 73500000, "employees": 37, "taxDebt": 57000, "revenueTrend": 0.15},
+    "bki": {"activeLoansCount": 2, "totalDebtBalance": 6300000, "overdues12m": 1, "maxOverdueDays": 7, "inquiries3m": 2},
+    "abs": {"settlementAccount": "40702810900000062340", "cashBalance": 3140000, "currentDebtPayments": 260000}
+  },
+  "5251234564": {
+    "egrul": {"ogrn": "1125257004321", "name": "ООО «Ока Мебель»", "legalForm": "LLC", "okved": "31.09", "registeredAt": "2012-02-28", "status": "ACTIVE", "director": "Орлов Дмитрий Николаевич", "stopFactor": "LIQUIDATION"},
+    "fns": {"annualRevenue": 18800000, "employees": 12, "taxDebt": 940000, "revenueTrend": -0.31},
+    "bki": {"activeLoansCount": 5, "totalDebtBalance": 9200000, "overdues12m": 4, "maxOverdueDays": 93, "inquiries3m": 6},
+    "abs": {"settlementAccount": "40702810100000072341", "cashBalance": 74000, "currentDebtPayments": 680000}
+  },
+  "6161234561": {
+    "egrul": {"ogrn": "1196196012345", "name": "ООО «Дон Строй»", "legalForm": "LLC", "okved": "41.20", "registeredAt": "2019-08-15", "status": "ACTIVE", "director": "Бондаренко Артём Сергеевич", "stopFactor": null},
+    "fns": {"annualRevenue": 156000000, "employees": 79, "taxDebt": 310000, "revenueTrend": 0.23},
+    "bki": {"activeLoansCount": 3, "totalDebtBalance": 21500000, "overdues12m": 0, "maxOverdueDays": 0, "inquiries3m": 2},
+    "abs": {"settlementAccount": "40702810200000082342", "cashBalance": 8840000, "currentDebtPayments": 730000}
+  }
+}
+
