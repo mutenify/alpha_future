@@ -1,14 +1,14 @@
-# ml-mock-service
+# ml-mock
 
 Внутренний FastAPI-сервис с детерминированными моками ЕГРЮЛ, ФНС, БКИ и АБС.
 
 Запуск из корня репозитория:
 
 ```bash
-docker compose up --build ml-mock-service
+docker compose up --build ml-mock
 ```
 
-В Docker-сети сервис доступен по адресу `http://ml-mock-service:8081`. Порт не
+В Docker-сети сервис доступен по адресу `http://ml-mock:8081`. Порт не
 публикуется на хост. OpenAPI находится на `/docs`, healthcheck — на `/health`.
 
 LLM-ручки:
