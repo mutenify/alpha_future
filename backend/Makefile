@@ -15,6 +15,6 @@ test:
 vet:
 	go vet ./...
 
-# Миграции лежат в ../db/migrations (golang-migrate)
+# Миграции лежат в ./migrations (golang-migrate); в docker compose их применяет сервис migrate
 migrate:
-	migrate -path ../db/migrations -database "$(DATABASE_URL)" up
+	migrate -path ./migrations -database "$(DATABASE_URL)" up
