@@ -15,18 +15,47 @@ def test_fixed_company_contracts():
     accounts = client.get(f"/abs/{inn}/accounts").json()
 
     assert egrul["name"] == "ООО «Колос и Ко»"
-    assert fns["annualRevenue"] == 38_000_000
-    assert bki["totalDebtBalance"] == 4_100_000
-    assert len(accounts["monthlyRevenue"]) == 12
-    assert accounts["monthlyRevenue"][0]["month"] == "2025-10"
-    assert accounts["monthlyRevenue"][-1]["month"] == "2026-09"
+    assert egrul["directorName"] == "Иванова Ирина Сергеевна"
+    assert len(fns["monthlyRevenue"]) == 12
+    assert fns["monthlyRevenue"][0]["month"] == "2025-10"
+    assert fns["monthlyRevenue"][-1]["month"] == "2026-09"
+    assert fns["accountsBlocked"] is False
+    assert sum(o["balance"] for o in bki["obligations"]) == 4_100_000
+    assert round(sum(o["monthlyPayment"] for o in bki["obligations"])) == 110_000
+    assert accounts["totalBalance"] == 1_284_300
+    assert accounts["accounts"][0]["number"] == "40702810400000012345"
 
 
 def test_liquidation_stop_factor():
     response = client.get("/egrul/5251234564")
 
     assert response.status_code == 200
+    assert response.json()["status"] == "LIQUIDATING"
     assert response.json()["stopFactor"] == "LIQUIDATION"
+
+
+def test_mock_fault_header():
+    assert client.get("/bki/7701234560", headers={"X-Mock-Fault": "timeout"}).status_code == 504
+    assert client.get("/bki/7701234560", headers={"X-Mock-Fault": "error"}).status_code == 503
+
+
+def test_disbursement():
+    response = client.post(
+        "/abs/disbursements",
+        json={"contractNumber": "KD-1", "accountNumber": "40702810400000012345", "amount": 1_000_000},
+    )
+
+    assert response.status_code == 201
+    assert response.json()["operationId"].startswith("op-")
+
+
+def test_disbursement_is_idempotent():
+    body = {"contractNumber": "KD-2", "accountNumber": "40702810400000012345", "amount": 500_000}
+
+    first = client.post("/abs/disbursements", json=body).json()
+    second = client.post("/abs/disbursements", json=body).json()
+
+    assert first == second
 
 
 def test_fns_demo_failure():
