@@ -8,12 +8,21 @@ import (
 	"smartcredit/internal/scoring"
 )
 
-// Recommend — подбор по правилам (source = RULES): самый короткий подходящий продукт.
-// TODO: LLM-подбор по purpose с этим методом как фолбэком.
+// Recommend — LLM-подбор с обязательной проверкой продуктовых ограничений и fallback на правила.
 func (s *Service) Recommend(ctx context.Context, purpose string, amount float64, term int) (domain.Recommendation, error) {
 	products, err := s.products.ListActive(ctx)
 	if err != nil {
 		return domain.Recommendation{}, err
+	}
+	if code, explanation, source, callErr := s.recommender.Recommend(ctx, purpose, amount, term); callErr == nil {
+		for _, p := range products {
+			if p.Code == code && p.Validate(amount, term) == nil {
+				return domain.Recommendation{
+					ProductCode: p.Code, MonthlyPayment: scoring.Round2(scoring.Payment(amount, term, p.BaseRate)),
+					Explanation: explanation, Source: source,
+				}, nil
+			}
+		}
 	}
 	for _, p := range products {
 		if p.Validate(amount, term) == nil {

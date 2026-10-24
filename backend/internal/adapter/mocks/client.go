@@ -22,6 +22,31 @@ func New(baseURL string, timeout time.Duration) *Client {
 	return &Client{baseURL: baseURL, http: &http.Client{Timeout: timeout}}
 }
 
+func (c *Client) Health(ctx context.Context) error {
+	var out struct {
+		Status string `json:"status"`
+	}
+	if err := c.do(ctx, http.MethodGet, "/health", nil, &out); err != nil {
+		return err
+	}
+	if out.Status != "ok" {
+		return domain.ErrSourceUnavailable
+	}
+	return nil
+}
+
+func (c *Client) Recommend(ctx context.Context, purpose string, amount float64, termMonths int) (string, string, string, error) {
+	var out struct {
+		ProductCode string `json:"productCode"`
+		Explanation string `json:"explanation"`
+		Source      string `json:"source"`
+	}
+	err := c.do(ctx, http.MethodPost, "/llm/recommend", map[string]any{
+		"purpose": purpose, "amount": amount, "termMonths": termMonths,
+	}, &out)
+	return out.ProductCode, out.Explanation, out.Source, err
+}
+
 // do: 404 → domain.ErrNotFound, таймаут и 5xx → domain.ErrSourceUnavailable (конвейер ретраит).
 func (c *Client) do(ctx context.Context, method, path string, body, out any) error {
 	var buf bytes.Buffer

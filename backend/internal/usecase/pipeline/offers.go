@@ -36,7 +36,7 @@ func variants(app domain.Application, outcome domain.Outcome, p domain.Financial
 		a := scoring.Payment(app.Amount, app.TermMonths, rate)
 		return []variant{{domain.OfferOriginal, domain.VariantRequested, scoring.Terms{
 			Amount: app.Amount, TermMonths: app.TermMonths, MonthlyPayment: scoring.Round2(a),
-			PGap: scoring.PGap(p.CashFlowMu, p.CashFlowSigma, p.CurrentDebtPayments, a),
+			PGap: scoring.PGap(p.CashFlowMu, p.CashFlowSigma, p.CurrentDebtPayments, a, p.CashBalance, app.TermMonths),
 		}}}
 	case domain.OutcomeCounterOffer:
 		var out []variant

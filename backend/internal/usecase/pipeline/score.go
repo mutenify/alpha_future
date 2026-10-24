@@ -5,6 +5,7 @@ import (
 
 	"smartcredit/internal/domain"
 	"smartcredit/internal/scoring"
+	"smartcredit/internal/usecase/port"
 )
 
 // score — слой 1 (PD) и слой 2 (кассовый разрыв), затем решение SYSTEM:
@@ -25,7 +26,11 @@ func (s *Service) score(ctx context.Context, app domain.Application) error {
 	if outcome == domain.OutcomeCounterOffer && len(variants(app, outcome, profile, rate)) == 0 {
 		outcome = domain.OutcomeManualReview // ни А, ни Б не проходят — решает инспектор
 	}
-	text, source := s.Explainer.Explain(ctx, outcome, factors)
+	payment := scoring.Payment(app.Amount, app.TermMonths, rate)
+	pGap := scoring.PGap(profile.CashFlowMu, profile.CashFlowSigma, profile.CurrentDebtPayments, payment, profile.CashBalance, app.TermMonths)
+	text, source := s.Explainer.Explain(ctx, port.ExplainInput{
+		Outcome: outcome, Score: points, PD: pd, PGap: pGap, Factors: factors,
+	})
 
 	return s.Tx.WithinTx(ctx, func(ctx context.Context) error {
 		res, err := s.Scores.SaveResult(ctx, domain.ScoreResult{

@@ -11,9 +11,21 @@ type FileStorage interface {
 	Save(ctx context.Context, key string, r io.Reader) (int64, error)
 }
 
+type ExplainInput struct {
+	Outcome domain.Outcome
+	Score   int
+	PD      float64
+	PGap    float64
+	Factors []domain.Factor
+}
+
 // Explainer пишет объяснение решения простым языком (LLM с шаблонным фолбэком).
 type Explainer interface {
-	Explain(ctx context.Context, outcome domain.Outcome, factors []domain.Factor) (text, source string)
+	Explain(ctx context.Context, input ExplainInput) (text, source string)
+}
+
+type ProductRecommender interface {
+	Recommend(ctx context.Context, purpose string, amount float64, termMonths int) (code, explanation, source string, err error)
 }
 
 // EventPublisher рассылает смену статуса подписчикам SSE.

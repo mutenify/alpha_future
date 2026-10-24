@@ -19,7 +19,7 @@ type infra struct {
 	sources   *mocks.Client
 	storage   *storage.Local
 	events    *events.Broker
-	explainer explain.Template
+	explainer *explain.Client
 }
 
 type repos struct {
@@ -52,9 +52,10 @@ func newInfra(db *postgres.DB, cfg config.Config) infra {
 			scoring: postgres.Scoring{DB: db}, rules: postgres.Rules{DB: db}, queue: postgres.Queue{DB: db},
 			audit: postgres.Audit{DB: db}, jobs: postgres.Jobs{DB: db}, idempotency: postgres.Idempotency{DB: db},
 		},
-		tokens:  auth.NewJWT(cfg.JWTSecret, cfg.JWTTTL),
-		sources: mocks.New(cfg.MockURL, cfg.MockTimeout),
-		storage: storage.NewLocal(cfg.StorageDir),
-		events:  events.NewBroker(),
+		tokens:    auth.NewJWT(cfg.JWTSecret, cfg.JWTTTL),
+		sources:   mocks.New(cfg.MockURL, cfg.MockTimeout),
+		storage:   storage.NewLocal(cfg.StorageDir),
+		events:    events.NewBroker(),
+		explainer: explain.New(cfg.MockURL, cfg.MockTimeout),
 	}
 }

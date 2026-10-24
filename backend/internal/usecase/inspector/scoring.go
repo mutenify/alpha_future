@@ -24,7 +24,7 @@ func (s *Service) Scoring(ctx context.Context, appID string) (domain.ScoringDeta
 		return d, err
 	}
 	rate := rateFor(app.Product, &d.Result)
-	gap := scoring.CashGapMetrics(d.Profile, app.Product, scoring.Payment(app.Amount, app.TermMonths, rate))
+	gap := scoring.CashGapMetrics(d.Profile, app.Product, scoring.Payment(app.Amount, app.TermMonths, rate), app.TermMonths)
 	d.CashGap = &gap
 	return d, nil
 }

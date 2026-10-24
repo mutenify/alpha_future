@@ -69,7 +69,9 @@ func (s *Service) saveEnrichment(ctx context.Context, appID string, d sourceData
 }
 
 func (s *Service) rejectByStopFactor(ctx context.Context, app domain.Application, factor string) error {
-	text, source := s.Explainer.Explain(ctx, domain.OutcomeRejected, []domain.Factor{{Code: factor}})
+	text, source := s.Explainer.Explain(ctx, port.ExplainInput{
+		Outcome: domain.OutcomeRejected, Factors: []domain.Factor{{Code: factor}},
+	})
 	if _, err := s.Decisions.Create(ctx, domain.Decision{
 		ApplicationID: app.ID, DecidedBy: domain.ActorSystem, Outcome: domain.OutcomeRejected,
 		ReasonCode: factor, ReasonText: text, ExplanationSource: source,
