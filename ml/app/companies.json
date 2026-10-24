@@ -46,6 +46,12 @@
     "fns": {"annualRevenue": 156000000, "employees": 79, "taxDebt": 310000, "revenueTrend": 0.23},
     "bki": {"activeLoansCount": 3, "totalDebtBalance": 21500000, "overdues12m": 0, "maxOverdueDays": 0, "inquiries3m": 2},
     "abs": {"settlementAccount": "40702810200000082342", "cashBalance": 8840000, "currentDebtPayments": 730000}
+  },
+  "7707083893": {
+    "egrul": {"ogrn": "1027700123456", "name": "ООО «Цифровая Среда»", "legalForm": "LLC", "okved": "62.01", "registeredAt": "2017-06-20", "status": "ACTIVE", "director": "Соколова Анна Викторовна", "stopFactor": null},
+    "fns": {"annualRevenue": 108000000, "employees": 42, "taxDebt": 0, "revenueTrend": 0.17},
+    "bki": {"activeLoansCount": 1, "totalDebtBalance": 3200000, "overdues12m": 0, "maxOverdueDays": 0, "inquiries3m": 1},
+    "abs": {"settlementAccount": "40702810300000092343", "cashBalance": 5200000, "currentDebtPayments": 145000}
   }
 }
 

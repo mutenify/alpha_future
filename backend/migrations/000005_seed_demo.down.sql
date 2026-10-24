@@ -1,2 +1,10 @@
-DELETE FROM companies WHERE inn IN ('7701234560', '7812345675', '5401234566', '6671234569', '5251234564', '7700000503');
-DELETE FROM users WHERE login IN ('client1', 'client2', 'client3', 'client4', 'client5', 'client6', 'inspector1');
+DELETE FROM applications WHERE id IN (
+    '00000000-0000-0000-0000-000000000152',
+    '00000000-0000-0000-0000-000000000153',
+    '00000000-0000-0000-0000-000000000154',
+    '00000000-0000-0000-0000-000000000155',
+    '00000000-0000-0000-0000-000000000156'
+);
+
+DELETE FROM companies WHERE inn IN ('7701234560', '7812345675', '5401234566', '6671234569', '5251234564', '7700000503', '1651234561', '2311234566', '6161234561', '7707083893');
+DELETE FROM users WHERE login IN ('client1', 'client2', 'client3', 'client4', 'client5', 'client6', 'client7', 'client8', 'client9', 'client10', 'inspector1');

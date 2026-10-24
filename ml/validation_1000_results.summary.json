@@ -1,0 +1,86 @@
+{
+  "seed": 2026,
+  "companies": 1000,
+  "simulations_per_company": 10000,
+  "roc_auc": 0.7647950175247499,
+  "gini": 0.5295900350494998,
+  "decisions": {
+    "MANUAL_REVIEW": 622,
+    "APPROVED": 18,
+    "REJECTED": 164,
+    "COUNTER_OFFER": 196
+  },
+  "stress_decisions": {
+    "MANUAL_REVIEW": 742,
+    "COUNTER_OFFER": 90,
+    "REJECTED": 164,
+    "APPROVED": 4
+  },
+  "mean_p_gap": 0.6753593976326886,
+  "mean_p_gap_stress": 0.7195135423496627,
+  "mean_mc_abs_error": 0.0008716777280515496,
+  "max_mc_abs_error": 0.011922809549638175,
+  "calibration": [
+    {
+      "decile": 1,
+      "count": 100,
+      "mean_pd": 0.022682926560851465,
+      "default_rate": 0.01
+    },
+    {
+      "decile": 2,
+      "count": 100,
+      "mean_pd": 0.03394891759260112,
+      "default_rate": 0.06
+    },
+    {
+      "decile": 3,
+      "count": 100,
+      "mean_pd": 0.04517132973810974,
+      "default_rate": 0.05
+    },
+    {
+      "decile": 4,
+      "count": 100,
+      "mean_pd": 0.0568943725787921,
+      "default_rate": 0.05
+    },
+    {
+      "decile": 5,
+      "count": 100,
+      "mean_pd": 0.07396995335425502,
+      "default_rate": 0.13
+    },
+    {
+      "decile": 6,
+      "count": 100,
+      "mean_pd": 0.09323840398780431,
+      "default_rate": 0.08
+    },
+    {
+      "decile": 7,
+      "count": 100,
+      "mean_pd": 0.1256138665276578,
+      "default_rate": 0.07
+    },
+    {
+      "decile": 8,
+      "count": 100,
+      "mean_pd": 0.17141571303336575,
+      "default_rate": 0.17
+    },
+    {
+      "decile": 9,
+      "count": 100,
+      "mean_pd": 0.27653761048462644,
+      "default_rate": 0.21
+    },
+    {
+      "decile": 10,
+      "count": 100,
+      "mean_pd": 0.4819949579190419,
+      "default_rate": 0.48
+    }
+  ],
+  "warning": "Synthetic labels sampled from model PD; this is not independent validation on real defaults."
+}

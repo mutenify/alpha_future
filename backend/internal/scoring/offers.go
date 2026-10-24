@@ -12,7 +12,7 @@ type Terms struct {
 
 // PointA — максимальная сумма при запрошенном сроке.
 func PointA(p domain.FinancialProfile, pr domain.Product, term int, rate float64) (Terms, bool) {
-	amount := min(Principal(MaxPayment(p, pr), term, rate), pr.MaxAmount)
+	amount := min(Principal(MaxPayment(p, pr, term), term, rate), pr.MaxAmount)
 	if amount < pr.MinAmount {
 		return Terms{}, false
 	}
@@ -21,9 +21,8 @@ func PointA(p domain.FinancialProfile, pr domain.Product, term int, rate float64
 
 // PointB — запрошенная сумма на минимальном сроке, где платёж проходит лимит.
 func PointB(p domain.FinancialProfile, pr domain.Product, amount float64, fromTerm int, rate float64) (Terms, bool) {
-	limit := MaxPayment(p, pr)
 	for t := fromTerm + 1; t <= pr.MaxTermMonths; t++ {
-		if Payment(amount, t, rate) <= limit {
+		if Payment(amount, t, rate) <= MaxPayment(p, pr, t) {
 			return terms(p, amount, t, rate), true
 		}
 	}
@@ -32,7 +31,7 @@ func PointB(p domain.FinancialProfile, pr domain.Product, amount float64, fromTe
 
 // Fits — проходит ли запрошенная сумма лимит по потоку (S ≤ S*).
 func Fits(p domain.FinancialProfile, pr domain.Product, amount float64, term int, rate float64) bool {
-	return Payment(amount, term, rate) <= MaxPayment(p, pr)
+	return Payment(amount, term, rate) <= MaxPayment(p, pr, term)
 }
 
 func terms(p domain.FinancialProfile, amount float64, term int, rate float64) Terms {
@@ -41,6 +40,6 @@ func terms(p domain.FinancialProfile, amount float64, term int, rate float64) Te
 		Amount:         Round2(amount),
 		TermMonths:     term,
 		MonthlyPayment: Round2(a),
-		PGap:           PGap(p.CashFlowMu, p.CashFlowSigma, p.CurrentDebtPayments, a),
+		PGap:           PGap(p.CashFlowMu, p.CashFlowSigma, p.CurrentDebtPayments, a, p.CashBalance, term),
 	}
 }

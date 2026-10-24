@@ -1,5 +1,4 @@
-// Package explain — объяснение решения по шаблонам (фолбэк, когда LLM недоступна).
-// TODO: LLM-реализация port.Explainer, которая при ошибке зовёт Template.
+// Package explain — LLM-объяснения с шаблонным фолбэком.
 package explain
 
 import (
@@ -8,6 +7,7 @@ import (
 	"strings"
 
 	"smartcredit/internal/domain"
+	"smartcredit/internal/usecase/port"
 )
 
 const topFactors = 2
@@ -27,14 +27,14 @@ var stopFactors = map[string]string{
 
 type Template struct{}
 
-func (Template) Explain(_ context.Context, o domain.Outcome, factors []domain.Factor) (string, string) {
-	parts := []string{headlines[o]}
-	for _, f := range factors {
+func (Template) Explain(_ context.Context, in port.ExplainInput) (string, string) {
+	parts := []string{headlines[in.Outcome]}
+	for _, f := range in.Factors {
 		if s, ok := stopFactors[f.Code]; ok {
 			parts = append(parts, s)
 		}
 	}
-	parts = append(parts, worstFactors(factors)...)
+	parts = append(parts, worstFactors(in.Factors)...)
 	return strings.Join(parts, " "), "TEMPLATE"
 }
 

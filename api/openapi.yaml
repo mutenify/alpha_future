@@ -698,7 +698,7 @@ components:
         checks:
           type: object
           additionalProperties: { type: string, enum: [ok, down] }
-          example: { db: ok, mocks: ok, llm: down }
+          example: { db: ok, ml: ok }
     Role:
       type: string
       enum: [CLIENT, INSPECTOR, ADMIN]

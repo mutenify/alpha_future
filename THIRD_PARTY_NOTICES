@@ -1,9 +1,8 @@
 THIRD-PARTY SOFTWARE NOTICES
 ============================
 
-This file is informational and does not replace the license texts distributed
-by the respective projects. Versions are taken from the dependency manifests
-used by the Python ML mock and Go backend.
+This informational inventory does not replace the license texts distributed
+by each project. Versions follow the dependency and container manifests.
 
 Python
 ------
@@ -11,9 +10,13 @@ Python
 - FastAPI 0.119.1 — MIT License
 - HTTPX 0.28.1 — BSD 3-Clause License
 - Uvicorn 0.38.0 — BSD 3-Clause License
-- Pydantic (installed by FastAPI and imported directly) — MIT License
-- NumPy (synthetic data generator) — BSD 3-Clause License
-- pytest 8.4.2 (development only) — MIT License
+- Pydantic (FastAPI dependency, imported directly) — MIT License
+- NumPy 2.3.4 — BSD 3-Clause License
+- Matplotlib 3.10.7 — PSF-based Matplotlib License
+- pytest 8.4.2 — MIT License
+- nbclient 0.10.2 — BSD 3-Clause License
+- nbformat 5.10.4 — BSD 3-Clause License
+- ipykernel 6.30.1 — BSD 3-Clause License
 
 Go
 --
@@ -21,7 +24,7 @@ Go
 - github.com/golang-jwt/jwt/v5 5.2.1 — MIT License
 - github.com/jackc/pgx/v5 5.7.2 — MIT License
 - github.com/jackc/pgpassfile 1.0.0 — MIT License
-- github.com/jackc/pgservicefile — MIT License
+- github.com/jackc/pgservicefile (commit 5a60cdf6a761) — MIT License
 - github.com/jackc/puddle/v2 2.2.2 — MIT License
 - golang.org/x/crypto 0.31.0 — BSD 3-Clause License
 - golang.org/x/sync 0.10.0 — BSD 3-Clause License
@@ -30,36 +33,45 @@ Go
 JavaScript
 ----------
 
-No third-party JavaScript packages are declared yet: the repository does not
-currently contain a frontend package.json. Add its production and development
-dependencies here when the frontend manifest is introduced.
+- React and React DOM 18.3.1 — MIT License
+- Vite 6.0.5 — MIT License
+- @vitejs/plugin-react 4.3.4 — MIT License
+- TypeScript 5.7.2 — Apache License 2.0
+- @types/react 18.3.18 and @types/react-dom 18.3.5 — MIT License
 
-Runtime components
-------------------
+Container and runtime components
+--------------------------------
 
 - PostgreSQL 16 and pgcrypto — PostgreSQL License
-- Python container image — Python Software Foundation License
-- Go toolchain/container image — BSD 3-Clause License
+- migrate/migrate 4.18.1 — MIT License
+- Python 3.13 container image/runtime — Python Software Foundation License
+- Go 1.24 toolchain/runtime — BSD 3-Clause License
+- Node.js 22 container image/runtime — Node.js license and its bundled
+  third-party notices
+- nginx 1.27 — BSD 2-Clause License
+- Docker Compose — Apache License 2.0
 
 Open-weights model
 ------------------
 
-The optional local LLM is Qwen2.5-3B-Instruct, exposed through Ollama as
-`qwen2.5:3b`. Its weights are governed by the Qwen Research License. The model
-weights are not distributed in this repository and are not downloaded by
-docker-compose.yml; users must review and accept the model license separately.
+The optional local model is Qwen2.5-3B-Instruct, exposed through Ollama as
+`qwen2.5:3b`. Its official model card identifies the weights license as
+`qwen-research`; see https://huggingface.co/Qwen/Qwen2.5-3B-Instruct. The
+weights are neither distributed nor downloaded by this repository. Operators
+must independently review and accept the applicable license.
 
 Simulated integrations
 ----------------------
 
-All integrations below are demo mocks. They do not connect to production
-systems, request official data, or create legally significant operations:
+Every integration below is a demonstration mock. It does not contact a
+production system, obtain official records, or create legally significant
+operations:
 
 - ЕГРЮЛ/ЕГРИП — company and sole-proprietor registry data;
 - ФНС «Прозрачный бизнес» — revenue, headcount, taxes and tax debt;
 - БКИ — credit history, debt and delinquency data;
-- АБС — accounts, balances, turnover and existing payments;
+- АБС — balances, turnover, debt payments and disbursement simulation;
 - ПЭП — simple electronic signature workflow and signing status.
 
-Product and organization names are used only to describe compatibility or the
-systems being simulated. No endorsement or affiliation is implied.
+Product and organization names only describe compatibility or mocked systems;
+no endorsement or affiliation is implied.

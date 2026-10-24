@@ -1,0 +1,7 @@
+FROM python:3.13-slim
+WORKDIR /work
+COPY ml/requirements.txt ml/requirements-dev.txt /work/ml/
+RUN pip install --no-cache-dir -r /work/ml/requirements-dev.txt
+COPY . /work
+WORKDIR /work/ml
+CMD ["python", "-m", "pytest"]

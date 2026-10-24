@@ -28,7 +28,7 @@ func Load() (Config, error) {
 		JWTSecret:    env("JWT_SECRET", ""),
 		JWTTTL:       duration("JWT_TTL", 12*time.Hour),
 		DemoAuth:     boolean("DEMO_AUTH", true),
-		MockURL:      env("MOCK_URL", "http://localhost:8090/mock"),
+		MockURL:      env("ML_SERVICE_URL", env("MOCK_URL", "http://localhost:8081")),
 		MockTimeout:  duration("MOCK_TIMEOUT", 3*time.Second),
 		StorageDir:   env("STORAGE_DIR", "./data/documents"),
 		CORSOrigin:   env("CORS_ORIGIN", "http://localhost:3000"),

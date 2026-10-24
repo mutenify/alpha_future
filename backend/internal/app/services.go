@@ -36,7 +36,7 @@ func newServices(in infra, cfg config.Config) services {
 	})
 	return services{
 		auth:    auth.New(r.users, in.tokens, in.passwords, cfg.DemoAuth),
-		catalog: catalog.New(r.products),
+		catalog: catalog.New(r.products, in.sources),
 		company: company.New(in.sources),
 		apps:    apps,
 		inspector: inspector.New(inspector.Deps{
